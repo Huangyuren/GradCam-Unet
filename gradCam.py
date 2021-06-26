@@ -46,7 +46,6 @@ model = tf.keras.models.load_model(weight_file_dir, custom_objects={'dice_coef_l
 # model.summary()
 last_conv_layer = model.get_layer("conv2d_32")
 # Hard code on class index
-class_idx = 1
 heatmap_model = tf.keras.models.Model([model.inputs], [last_conv_layer.output, model.output])
 
 for i in range(len(img_all_paths)):
@@ -59,9 +58,15 @@ for i in range(len(img_all_paths)):
     # code from stackoverflow: https://stackoverflow.com/questions/58322147/how-to-generate-cnn-heatmaps-using-built-in-keras-in-tf2-0-tf-keras
     # Get gradient of the winner class w.r.t. the output of the (last) conv. layer
     with tf.GradientTape() as gtape:
+        print(f"image_gray shape: {image_gray.shape}")
         conv_output, predictions = heatmap_model(image_gray)
-        loss = predictions[:, class_idx]
+        # print(f"predictions shape: {predictions.shape}")
+        # for j in range(20):
+        #     print(f"(126, 126+{j}) value: {predictions[0][125][125+j]}")
+        # loss = tf.where(predictions[:,:,:] > 0.5, tf.math.round(predictions), 0.0*predictions)
+        loss = tf.where(predictions[:,:,:] > 0.5, predictions, 0.0*predictions)
         grads = gtape.gradient(loss, conv_output)
+        # print(f"grads shape: {grads.shape}")
         pooled_grads = K.mean(grads, axis=(0, 1, 2))
 
     heatmap = tf.reduce_mean(tf.multiply(pooled_grads, conv_output), axis=-1)
@@ -78,8 +83,12 @@ for i in range(len(img_all_paths)):
 
     heatmap_img = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
     img_overall = cv2.addWeighted(heatmap_img, 0.4, img_src_gray, 0.6, 0)
-    print(f"[Shape] Image source: {img_src_gray.shape}, Heatmap: {heatmap_img.shape}")
+    # print(f"[Shape] Image source: {img_src_gray.shape}, Heatmap: {heatmap_img.shape}")
     cv2.imwrite('./heatmapPlot/heatmapBlended_'+str(i)+'.png', img_overall)
+
+    # Trying to write inference method
+    # predresult = model.predict(image_gray)
+    # cv2.imwrite('./inference_result_'+str(i)+'.png', predresult)
 
 
     # Pillow + matplotlib version, PIL.Image size returns as (width, height); while cv2.shape returns as (height, width)
