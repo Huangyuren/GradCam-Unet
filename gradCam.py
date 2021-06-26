@@ -88,7 +88,19 @@ for i in range(len(img_all_paths)):
 
     # Trying to write inference method
     # predresult = model.predict(image_gray)
-    # cv2.imwrite('./inference_result_'+str(i)+'.png', predresult)
+    # threshold = 127
+    # background = [0,0,0]
+    # tumor = [255,255,255]
+    # for img in predresult:
+    #     img_std = np.zeros((img.shape[0], img.shape[1], 3), dtype=np.uint8)
+    #     for r in range(img.shape[0]):
+    #         for c in range(img.shape[1]):
+    #             if img[r, c] < (threshold/255.0):
+    #                 img_std[r][c] = background
+    #             else:
+    #                 img_std[r][c] = tumor
+    #     img_std = cv2.resize(img_std, (256,256), interpolation=cv2.INTER_CUBIC)
+    #     cv2.imwrite('./infer_result_'+str(i)+'.png', img_std)
 
 
     # Pillow + matplotlib version, PIL.Image size returns as (width, height); while cv2.shape returns as (height, width)
