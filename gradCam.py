@@ -37,22 +37,24 @@ def get_images(img_path):
 
 K.set_learning_phase(1) #set learning phase
  
-weight_file_dir = './Model/model0415_HRNet-3.h5'
+weight_file_dir = './Model/model0423_HRNet-0.h5'
 img_path = './SampleData/'
 img_all_paths = get_images(img_path)
  
 model = tf.keras.models.load_model(weight_file_dir, custom_objects={'dice_coef_loss': dice_coef_loss, 'dice_coef': dice_coef, \
     'acc':'acc','f1': f1, 'precision': precision, 'recall': recall})
 # model.summary()
-last_conv_layer = model.get_layer("conv2d_32")
+# last_conv_layer = model.get_layer("conv2d_32")
+# last_conv_layer = model.get_layer("conv2d_107")
+last_conv_layer = model.get_layer("conv2d_215")
 # Hard code on class index
 heatmap_model = tf.keras.models.Model([model.inputs], [last_conv_layer.output, model.output])
 
 for i in range(len(img_all_paths)):
     print("Currently processing: {}".format(i))
-    image = cv2.imread(img_all_paths[i][0], cv2.IMREAD_GRAYSCALE)
-    # print(f"Current shape: {image.shape}")
-    image = cv2.resize(image, (256,256), interpolation=cv2.INTER_AREA)
+    image = Image.open(img_all_paths[i][0])
+    image = image.resize((256,256))
+    image_gray = np.array(image.convert('L')) # convert to grayscale image
     image_gray = np.expand_dims(image, axis=0)
 
     # code from stackoverflow: https://stackoverflow.com/questions/58322147/how-to-generate-cnn-heatmaps-using-built-in-keras-in-tf2-0-tf-keras
@@ -61,10 +63,8 @@ for i in range(len(img_all_paths)):
         print(f"image_gray shape: {image_gray.shape}")
         conv_output, predictions = heatmap_model(image_gray)
         # print(f"predictions shape: {predictions.shape}")
-        # for j in range(20):
-        #     print(f"(126, 126+{j}) value: {predictions[0][125][125+j]}")
-        # loss = tf.where(predictions[:,:,:] > 0.5, tf.math.round(predictions), 0.0*predictions)
-        loss = tf.where(predictions[:,:,:] > 0.5, predictions, 0.0*predictions)
+        loss = tf.where(predictions[:,:,:] > 0.5, tf.math.round(predictions), 0.0*predictions)
+        # loss = tf.where(predictions[:,:,:] > 0.5, predictions, 0.0*predictions)
         grads = gtape.gradient(loss, conv_output)
         # print(f"grads shape: {grads.shape}")
         pooled_grads = K.mean(grads, axis=(0, 1, 2))
@@ -79,7 +79,7 @@ for i in range(len(img_all_paths)):
     # OpenCV version
     img_src_gray = cv2.imread(img_all_paths[i][0], cv2.IMREAD_COLOR)
     img_src_gray = cv2.resize(img_src_gray, dsize=(256, 256), interpolation=cv2.INTER_NEAREST)
-    heatmap = np.resize(heatmap, (256, 256)).astype(np.uint8)
+    heatmap = np.resize(heatmap*255, (256, 256)).astype(np.uint8)
 
     heatmap_img = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
     img_overall = cv2.addWeighted(heatmap_img, 0.4, img_src_gray, 0.6, 0)
