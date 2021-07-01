@@ -37,16 +37,18 @@ def get_images(img_path):
 
 K.set_learning_phase(1) #set learning phase
  
-weight_file_dir = './Model/model0423_HRNet-0.h5'
+# weight_file_dir = './Model/model0423_HRNet-0.h5'
+weight_file_dir = './Model/model0422_UNetPP-0.h5'
 img_path = './SampleData/'
 img_all_paths = get_images(img_path)
  
 model = tf.keras.models.load_model(weight_file_dir, custom_objects={'dice_coef_loss': dice_coef_loss, 'dice_coef': dice_coef, \
     'acc':'acc','f1': f1, 'precision': precision, 'recall': recall})
 # model.summary()
-# last_conv_layer = model.get_layer("conv2d_32")
-# last_conv_layer = model.get_layer("conv2d_107")
-last_conv_layer = model.get_layer("conv2d_215")
+# last_conv_layer = model.get_layer("conv2d_32") # model0415_HRNet-3.h5
+# last_conv_layer = model.get_layer("conv2d_107") # model0415_HRNet-3.h5
+# last_conv_layer = model.get_layer("conv2d_215") # model0423_HRNet-0.h5
+last_conv_layer = model.get_layer("conv2d_29") # model0422_UNetPP-0.h5
 # Hard code on class index
 heatmap_model = tf.keras.models.Model([model.inputs], [last_conv_layer.output, model.output])
 
@@ -55,7 +57,9 @@ for i in range(len(img_all_paths)):
     image = Image.open(img_all_paths[i][0])
     image = image.resize((256,256))
     image_gray = np.array(image.convert('L')) # convert to grayscale image
+    # print(image_gray[50:-50, 50: -50])
     image_gray = np.expand_dims(image, axis=0)
+    image_gray = image_gray.astype(np.float32)
 
     # code from stackoverflow: https://stackoverflow.com/questions/58322147/how-to-generate-cnn-heatmaps-using-built-in-keras-in-tf2-0-tf-keras
     # Get gradient of the winner class w.r.t. the output of the (last) conv. layer
@@ -72,6 +76,7 @@ for i in range(len(img_all_paths)):
     heatmap = tf.reduce_mean(tf.multiply(pooled_grads, conv_output), axis=-1)
     heatmap = np.maximum(heatmap, 0)
     max_heat = np.max(heatmap)
+    print(f"max_heat: {max_heat}")
     if max_heat == 0:
         max_heat = 1e-10
     heatmap /= max_heat
@@ -100,7 +105,7 @@ for i in range(len(img_all_paths)):
     #             else:
     #                 img_std[r][c] = tumor
     #     img_std = cv2.resize(img_std, (256,256), interpolation=cv2.INTER_CUBIC)
-    #     cv2.imwrite('./infer_result_'+str(i)+'.png', img_std)
+    #     cv2.imwrite('./inferPlot/infer_result_'+str(i)+'.png', img_std)
 
 
     # Pillow + matplotlib version, PIL.Image size returns as (width, height); while cv2.shape returns as (height, width)
